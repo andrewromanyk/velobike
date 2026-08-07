@@ -1,0 +1,6 @@
+build_output
+settings.toml
+__pycache__
+.venv
+.vscode
+результат
