@@ -1,0 +1,45 @@
+name: Build and Release Executable
+
+on:
+  push:
+    tags:
+      - 'v*' # The pipeline will trigger when you push a tag starting with 'v' (e.g., v1.0.0)
+
+permissions:
+  contents: write # Required for the action to create a GitHub Release
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Install dependencies
+        # uv sync creates the .venv directory automatically based on pyproject.toml and uv.lock
+        run: uv sync
+
+      - name: Build executable
+        shell: cmd
+        # Executing via cmd ensures the .bat file and activation script are processed correctly
+        run: call build.bat
+
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build\DataProcessor.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
