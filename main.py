@@ -5,7 +5,6 @@ import modules.globals as globals
 def main():
     input_xml_dir = "xml"
     output_dir = "output"
-    
     test_xml_path = os.path.join(input_xml_dir, "goods.xml")
     output_excel_name = "veloportal_export.xlsx"
     
