@@ -7,6 +7,7 @@ from tkinter import filedialog
 
 # Імпорт ваших модулів
 from modules import veloportal, veloplaneta, globals, settings_manager, author, bergamont
+from modules import image_downloader
 
 class Application(ctk.CTk):
     def __init__(self):
@@ -64,7 +65,7 @@ class Application(ctk.CTk):
             variable=self.source_var, 
             font=globals.UI_FONT_DEFAULT,
             dropdown_font=globals.UI_FONT_DEFAULT,
-            command=self._on_source_change # Змінено обробник
+            command=self._on_source_change
         )
         self.dropdown_source.grid(row=1, column=0, padx=10, pady=0, sticky="n")
 
@@ -87,7 +88,19 @@ class Application(ctk.CTk):
         self._update_default_filename(self.source_var.get())
 
         # ==========================================
-        # ROW 3-6: Execution Controls & Dynamic Elements
+        # ROW 3: Checkbox for Downloading Images
+        # ==========================================
+        self.download_images_var = ctk.BooleanVar(value=True)
+        self.chk_download = ctk.CTkCheckBox(
+            self.main_container, 
+            text="Завантажувати зображення", 
+            variable=self.download_images_var,
+            font=globals.UI_FONT_DEFAULT
+        )
+        self.chk_download.grid(row=3, column=0, columnspan=3, pady=(30, 0))
+
+        # ==========================================
+        # ROW 4-7: Execution Controls & Dynamic Elements
         # ==========================================
         self.btn_run = ctk.CTkButton(
             self.main_container, 
@@ -99,12 +112,12 @@ class Application(ctk.CTk):
             width=220,
             height=45
         )
-        self.btn_run.grid(row=3, column=0, columnspan=3, pady=(60, 10))
+        self.btn_run.grid(row=4, column=0, columnspan=3, pady=(20, 10))
 
         self.progress_bar = ctk.CTkProgressBar(self.main_container, width=220, mode="indeterminate", progress_color=globals.UI_COLOR_BTN_READY)
         
         self.lbl_status = ctk.CTkLabel(self.main_container, text=globals.UI_STR_STATUS_READY, text_color=globals.UI_COLOR_TEXT, font=globals.UI_FONT_BOLD)
-        self.lbl_status.grid(row=5, column=0, columnspan=3, pady=(10, 0))
+        self.lbl_status.grid(row=6, column=0, columnspan=3, pady=(10, 0))
 
         self.btn_open_folder = ctk.CTkButton(
             self.main_container, 
@@ -158,8 +171,8 @@ class Application(ctk.CTk):
                     row_frame, 
                     text=globals.UI_STR_BTN_DEL_CAT, 
                     width=30, 
-                    fg_color=globals.UI_COLOR_BTN_DELETE,        # Using global
-                    hover_color=globals.UI_COLOR_BTN_DELETE_HOVER, # Using global
+                    fg_color=globals.UI_COLOR_BTN_DELETE,
+                    hover_color=globals.UI_COLOR_BTN_DELETE_HOVER,
                     command=delete_row
                 )
                 btn_del.pack(side="right")
@@ -217,7 +230,6 @@ class Application(ctk.CTk):
     def _select_input(self):
         current_source = self.source_var.get()
         
-        # Dynamically set the allowed file types based on the dropdown selection
         if current_source in ["veloplaneta", "bergamont"]:
             allowed_types = [("Excel Files", "*.xls;*.xlsx"), ("All Files", "*.*")]
         else:
@@ -244,10 +256,10 @@ class Application(ctk.CTk):
         if choice == "author":
             self.btn_input.configure(state="disabled")
             self.lbl_input.configure(text=globals.UI_STR_AUTHOR_URL_INFO, text_color=globals.UI_COLOR_TEXT_DIM)
-            self.input_file = globals.AUTHOR_XML_URL # Using global
+            self.input_file = globals.AUTHOR_XML_URL
         else:
             self.btn_input.configure(state="normal")
-            if self.input_file == globals.AUTHOR_XML_URL: # Using global
+            if self.input_file == globals.AUTHOR_XML_URL:
                 self.input_file = ""
                 self.lbl_input.configure(text=globals.UI_STR_LBL_NO_FILE, text_color=globals.UI_COLOR_TEXT_DIM)
 
@@ -294,7 +306,7 @@ class Application(ctk.CTk):
         self.btn_run.configure(state="disabled", text=globals.UI_STR_BTN_PROCESSING)
         self.lbl_status.configure(text=globals.UI_STR_STATUS_WORKING, text_color=globals.UI_COLOR_STATUS_WARN)
 
-        self.progress_bar.grid(row=4, column=0, columnspan=3, pady=(0, 5))
+        self.progress_bar.grid(row=5, column=0, columnspan=3, pady=(0, 5))
         self.progress_bar.start()
 
         source_settings = settings_manager.get_source_settings(current_source)
@@ -302,9 +314,17 @@ class Application(ctk.CTk):
         threading.Thread(target=self._execute_worker, args=(current_source, target_filename, source_settings), daemon=True).start()
 
     def _execute_worker(self, source_name, target_filename, settings):
+        # Зберігаємо оригінальну функцію завантаження
+        original_download = image_downloader.download_from_list
+        should_download = self.download_images_var.get()
+        
         try:
+            # Якщо користувач зняв галочку - підміняємо функцію "пустушкою"
+            if not should_download:
+                image_downloader.download_from_list = lambda *args, **kwargs: None
+
             os.makedirs(self.output_dir, exist_ok=True)
-            self._update_progress_text(globals.UI_STR_PROGRESS_PROCESSING) # Using global
+            self._update_progress_text(globals.UI_STR_PROGRESS_PROCESSING)
 
             if source_name == "veloportal":
                 active_module = veloportal
@@ -315,16 +335,26 @@ class Application(ctk.CTk):
             elif source_name == "bergamont":
                 active_module = bergamont
             else:
-                raise ValueError(globals.UI_STR_ERR_UNKNOWN_SOURCE) # Using global
+                raise ValueError(globals.UI_STR_ERR_UNKNOWN_SOURCE)
 
-            df = active_module.parse_to_dataframe(
-                source_path=self.input_file, 
-                min_price=settings.get('min_price', 0.0),
-                excluded_categories=settings.get('excluded_categories', []),
-                output_dir=self.output_dir
-            )
+            # Формуємо динамічні аргументи
+            parse_kwargs = {
+                "source_path": self.input_file,
+                "min_price": settings.get('min_price', 0.0),
+                "excluded_categories": settings.get('excluded_categories', []),
+                "output_dir": self.output_dir
+            }
+
+            # Для bergamont передаємо прапорець enable_fallback, щоб вимкнути ручний пошук
+            if source_name == "bergamont":
+                parse_kwargs["enable_fallback"] = should_download
+
+            df = active_module.parse_to_dataframe(**parse_kwargs)
             
-            self._update_progress_text(globals.UI_STR_PROGRESS_DOWNLOADING) # Using global
+            if should_download:
+                self._update_progress_text(globals.UI_STR_PROGRESS_DOWNLOADING)
+            else:
+                self._update_progress_text("Формування Excel файлу...")
 
             active_module.export_to_template(
                 df=df, 
@@ -339,6 +369,9 @@ class Application(ctk.CTk):
         except Exception as e:
             err_msg = globals.UI_STR_ERR_GENERIC.format(error=str(e))
             self.after(0, self._process_complete, err_msg, globals.UI_COLOR_STATUS_ERR, False)
+        finally:
+            # Обов'язково повертаємо оригінальну функцію на місце після завершення
+            image_downloader.download_from_list = original_download
 
     def _process_complete(self, message, color, success=False):
         self.progress_bar.stop()
@@ -348,7 +381,7 @@ class Application(ctk.CTk):
         self.btn_run.configure(state="normal", text=globals.UI_STR_BTN_RUN)
         
         if success:
-            self.btn_open_folder.grid(row=6, column=0, columnspan=3, pady=(15, 0))
+            self.btn_open_folder.grid(row=7, column=0, columnspan=3, pady=(15, 0))
 
 if __name__ == "__main__":
     if os.name == 'nt':
