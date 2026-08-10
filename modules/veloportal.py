@@ -21,8 +21,8 @@ def parse_to_dataframe(source_path: str, min_price: float = 0.0, excluded_catego
             'descr': item.findtext('descr', '').strip(),
         }
 
-        photos = [img.text.strip() for img in item.findall('photos/image') if img.text]
-        row['photos'] = ' | '.join(photos)
+        # findtext automatically returns only the first matching element
+        row['photos'] = item.findtext('photos/image', '').strip()
 
         for param in item.findall('params/param'):
             name = param.findtext('name')
@@ -116,19 +116,7 @@ def export_to_template(df: pd.DataFrame, output_dir: str, file_name: str, status
             photos_str = str(row.get('photos', '')).strip()
             
             if photos_str and photos_str != 'nan':
-                # Split the photos string using the ' | ' separator defined in the parser
-                urls = [u.strip() for u in photos_str.split(' | ') if u.strip()]
-                
-                if not urls:
-                    continue
-                
-                # If there is only one image, pass index 0 (no '@1' suffix)
-                if len(urls) == 1:
-                    image_tasks.append((urls[0], article, 0))
-                # If there are multiple images, append the index (1, 2, 3...) to create '@1', '@2'
-                else:
-                    for i, url in enumerate(urls, start=1):
-                        image_tasks.append((url, article, i))
+                image_tasks.append((photos_str, article, 0))
 
     export_df = export_df.fillna('')
     

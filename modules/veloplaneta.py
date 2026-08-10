@@ -172,14 +172,9 @@ def export_to_template(df: pd.DataFrame, output_dir: str, file_name: str, status
             photos_str = str(row.get('photos', '')).strip()
             
             if photos_str and photos_str.lower().startswith(('http://', 'https://')):
-                urls = [u.strip() for u in photos_str.split(' | ') if u.strip()]
-                if not urls:
-                    continue
-                if len(urls) == 1:
-                    image_tasks.append((urls[0], article, 0))
-                else:
-                    for i, url in enumerate(urls, start=1):
-                        image_tasks.append((url, article, i))
+                single_url = photos_str.split(' | ')[0].strip()
+                if single_url:
+                    image_tasks.append((single_url, article, 0))
 
     export_df = export_df.fillna('')
     

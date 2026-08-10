@@ -42,8 +42,7 @@ def parse_to_dataframe(source_path: str, min_price: float = 0.0, excluded_catego
         }
 
         # Обробка множинних тегів <picture>
-        photos = [img.text.strip() for img in item.findall('picture') if img.text]
-        row['photos'] = ' | '.join(photos)
+        row['photos'] = item.findtext('picture', '').strip()
 
         # Обробка тегів <param name="...">
         for param in item.findall('param'):
@@ -105,14 +104,7 @@ def export_to_template(df: pd.DataFrame, output_dir: str, file_name: str, status
             photos_str = str(row.get('photos', '')).strip()
             
             if photos_str and photos_str != 'nan':
-                urls = [u.strip() for u in photos_str.split(' | ') if u.strip()]
-                if not urls: continue
-                
-                if len(urls) == 1:
-                    image_tasks.append((urls[0], article, 0))
-                else:
-                    for i, url in enumerate(urls, start=1):
-                        image_tasks.append((url, article, i))
+                image_tasks.append((photos_str, article, 0))
 
     export_df = export_df.fillna('')
     
