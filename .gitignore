@@ -1,6 +1,11 @@
-build_output
-settings.toml
+# Ignore Python cache files and virtual environments
 __pycache__
 .venv
 .vscode
+# Ignore build output and result files
+build_output
 результат
+excel
+xml
+# Ignore configuration files
+settings.toml
