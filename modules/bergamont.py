@@ -168,7 +168,7 @@ def parse_to_dataframe(source_path: str, min_price: float = 0.0, excluded_catego
     GLOBAL_SKIP_FALLBACK = not enable_fallback 
     
     print(f"Module [bergamont]: Parsing {source_path}...")
-    df_raw = pd.read_excel(source_path)
+    df_raw = pd.read_excel(source_path, dtype={'Код для опт.': str})
     initial_count = len(df_raw)
     df_valid = df_raw.dropna(subset=['Код для опт.']).copy()
     print(f"Module [bergamont]: Dropped {initial_count - len(df_valid)} grouping/empty rows.")

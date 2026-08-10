@@ -13,4 +13,5 @@ dependencies = [
     "pyinstaller>=6.21.0",
     "requests==2.34.2",
     "toml==0.10.2",
+    "xlrd>=2.0.2",
 ]
