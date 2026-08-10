@@ -7,7 +7,7 @@ from tkinter import filedialog
 
 # Імпорт ваших модулів
 from modules import veloportal, veloplaneta, globals, settings_manager, author, bergamont
-from modules import image_downloader
+from modules import image_downloader, updater
 
 class Application(ctk.CTk):
     def __init__(self):
@@ -23,6 +23,8 @@ class Application(ctk.CTk):
         self.settings_window = None
 
         self._build_ui()
+
+        updater.start_background_updater(status_callback=self._update_version_status)
 
     def _build_ui(self):
         self.main_container = ctk.CTkFrame(self, fg_color="transparent")
@@ -127,6 +129,30 @@ class Application(ctk.CTk):
             fg_color="gray",
             hover_color="darkgray"
         )
+
+        self.frame_version = ctk.CTkFrame(self, fg_color="transparent")
+        # Розміщуємо рівно в правому нижньому куті з невеликим відступом
+        self.frame_version.place(relx=1.0, rely=1.0, x=-10, y=-10, anchor="se")
+        
+        self.lbl_version = ctk.CTkLabel(
+            self.frame_version, 
+            text="Перевірка оновлень...", 
+            text_color="gray", 
+            font=("Arial", 11)
+        )
+        self.lbl_version.pack()
+
+    def _update_version_status(self, text, needs_restart):
+        """Змінює текст у правому нижньому куті."""
+        def update_ui():
+            self.lbl_version.configure(text=text)
+            if needs_restart:
+                # Робимо текст яскравим і помітним, якщо потрібно перезапустити
+                self.lbl_version.configure(text_color="#2ecc71", font=("Arial", 12, "bold"))
+            else:
+                self.lbl_version.configure(text_color="gray", font=("Arial", 11))
+                
+        self.after(0, update_ui)
 
     # --- Settings Window Logic ---
     def _open_settings(self):

@@ -157,7 +157,7 @@ def export_to_template(df: pd.DataFrame, output_dir: str, file_name: str, status
         export_df['Наличие'] = df['is_in_stock'].apply(
             lambda x: "В наявності" if pd.to_numeric(x, errors='coerce') > 0 else "Немає в наявності"
         )
-        export_df['Поставщик'] = "П7"
+        export_df['Поставщик'] = "П3"
         export_df['Отображать'] = "так"
         export_df['Фото'] = df.get('photos', '')
         

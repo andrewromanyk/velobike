@@ -192,6 +192,8 @@ def parse_to_dataframe(source_path: str, min_price: float = 0.0, excluded_catego
         title_val = str(row.get('НАЙМЕНУВАННЯ', '')).strip()
         color_val = str(row.get('Колір', '')).strip() 
         article_val = str(row['Код для опт.']).strip()
+        if article_val.endswith('.0'):
+            article_val = article_val[:-2]
         
         photos_str = ""
         needs_review = False
@@ -240,9 +242,12 @@ def export_to_template(df: pd.DataFrame, output_dir: str, file_name: str, status
         export_df['Старая цена'] = df['old_price'].replace(0, '')
         export_df['Цвет'] = df['color'].replace('nan', '')
         export_df['Наличие'] = df['is_in_stock'].apply(lambda x: "В наявності" if pd.to_numeric(x, errors='coerce') > 0 else "Немає в наявності")
-        export_df['Поставщик'] = "П4"
+        export_df['Поставщик'] = "П1"
         export_df['Отображать'] = "так"
-        export_df['Фото'] = df.get('photos', '')
+        
+        # Гарантуємо, що навіть якщо десь є ' | ', ми записуємо лише одне фото в Excel
+        export_df['Фото'] = df['photos'].apply(lambda x: str(x).split(' | ')[0].strip() if x else '')
+        
         export_df['Описание товара(RU)'] = df.get('descr', '')
         export_df['Описание товара(UA)'] = df.get('descr', '')
         
@@ -257,13 +262,11 @@ def export_to_template(df: pd.DataFrame, output_dir: str, file_name: str, status
             subfolder = "перевірити" if needs_review else ""
             
             if photos_str and photos_str.lower().startswith(('http://', 'https://')):
-                urls = [u.strip() for u in photos_str.split(' | ') if u.strip()]
-                if not urls: continue
-                if len(urls) == 1:
-                    image_tasks.append((urls[0], article, 0, subfolder))
-                else:
-                    for i, url in enumerate(urls, start=1):
-                        image_tasks.append((url, article, i, subfolder))
+                # Беремо лише перше посилання
+                single_url = photos_str.split(' | ')[0].strip()
+                if single_url:
+                    # Додаємо лише одне завдання, завжди з індексом 0 (без @1)
+                    image_tasks.append((single_url, article, 0, subfolder))
 
     export_df = export_df.fillna('')
     with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
@@ -281,9 +284,6 @@ def get_similarity_score(title: str, image_url: str) -> int:
     filename = os.path.basename(parsed_url.path)
     image_tokens = set(re.findall(r'\w+', filename.lower()))
     return len(title_tokens.intersection(image_tokens))
-
-# --- ВАШІ ПАРСЕРИ САЙТІВ ЗАЛИШЕНО БЕЗ ЗМІН ДЛЯ ЕКОНОМІЇ МІСЦЯ ---
-# (Залиште тут ваші функції _scrape_bottecchia, _scrape_vnc, _scrape_reidbikes)
 
 def _scrape_bottecchia(url: str, color_from_excel: str) -> str:
     try:
@@ -388,7 +388,8 @@ def _scrape_vnc(url: str, color_from_excel: str, title_from_excel: str) -> str:
                         img = f"https:{img}"
                     if img not in final_urls:
                         final_urls.append(img)
-                return " | ".join(final_urls)
+                # ПОВЕРТАЄМО ЛИШЕ ПЕРШЕ ЗОБРАЖЕННЯ
+                return final_urls[0] if final_urls else ""
 
         fallback_candidates = []
         target_title_tokens = set(re.findall(r'\w+', str(title_from_excel).lower()))
@@ -499,7 +500,8 @@ def _scrape_reidbikes(url: str, color_from_excel: str) -> str:
                 if clean_src not in final_urls:
                     final_urls.append(clean_src)
                     
-        return " | ".join(final_urls)
+        # ПОВЕРТАЄМО ЛИШЕ ПЕРШЕ ЗОБРАЖЕННЯ
+        return final_urls[0] if final_urls else ""
         
     except Exception as e:
         print(f"Module [bergamont]: Scrape Error Reid ({url}) - {e}")
