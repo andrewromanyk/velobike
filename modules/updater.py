@@ -6,7 +6,7 @@ import threading
 import traceback
 
 # Головна константа версії вашої програми
-CURRENT_VERSION = "v0.0.5" 
+CURRENT_VERSION = "v0.0.6" 
 REPO_NAME = "andrewromanyk/velobike"
 CHECK_INTERVAL_SECONDS = 15 * 60  # 15 хвилин
 

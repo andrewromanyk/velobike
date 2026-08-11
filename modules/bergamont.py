@@ -243,7 +243,7 @@ def export_to_template(df: pd.DataFrame, output_dir: str, file_name: str, status
         export_df['Цвет'] = df['color'].replace('nan', '')
         export_df['Наличие'] = df['is_in_stock'].apply(lambda x: "В наявності" if pd.to_numeric(x, errors='coerce') > 0 else "Немає в наявності")
         export_df['Поставщик'] = "П1"
-        export_df['Отображать'] = "так"
+        export_df['Отображать'] = "да"
         
         # Гарантуємо, що навіть якщо десь є ' | ', ми записуємо лише одне фото в Excel
         export_df['Фото'] = df['photos'].apply(lambda x: str(x).split(' | ')[0].strip() if x else '')
